@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dráva Bait — Admin</title>
+<style>
+:root{--bg:#0b0c0d;--panel:#141618;--panel2:#1b1e20;--text:#f5f2e9;--muted:#a9a9a2;--gold:#d5ad57;--line:#2b2e30;--danger:#e37b7b;--ok:#78b889}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px Arial,Helvetica,sans-serif}
+.wrap{max-width:1180px;margin:auto;padding:28px 18px}h1,h2{color:var(--gold)}h1{margin:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin:15px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input,textarea,select,button{font:inherit;padding:11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:#fff}
+input,textarea,select{width:100%}textarea{min-height:100px;resize:vertical}button{cursor:pointer;background:var(--gold);color:#17120a;font-weight:800}
+button.secondary{background:transparent;color:var(--text)}button.danger{background:transparent;color:var(--danger);border-color:#633}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.product{display:grid;grid-template-columns:110px 1fr;gap:16px}
+.thumb{width:110px;height:130px;border-radius:12px;background:var(--panel2);display:grid;place-items:center;overflow:hidden;border:1px solid var(--line)}
+.thumb img{width:100%;height:100%;object-fit:contain}.empty{color:var(--muted);font-size:12px;text-align:center;padding:8px}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}.muted{color:var(--muted)}.err{color:#ff9b9b}.ok{color:var(--ok)}
+.hidden{display:none}.order{border-top:1px solid var(--line);padding:18px 0}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:var(--gold);color:#17120a;font-weight:800;font-size:11px}
+@media(max-width:700px){.grid,.formgrid{grid-template-columns:1fr}.product{grid-template-columns:80px 1fr}.thumb{width:80px;height:100px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row" style="justify-content:space-between">
+    <div><h1>DRÁVA BAIT — Admin</h1><div class="muted">Termékek és rendelések kezelése</div></div>
+  </div>
+
+  <section class="panel" id="loginPanel">
+    <h2>Admin belépés</h2>
+    <div class="row"><input id="pw" type="password" placeholder="Admin jelszó" style="max-width:350px"><button onclick="login()">Belépés</button></div>
+    <p id="loginMsg" class="muted">A jelenlegi helyi admin jelszó: <b>zsombi</b></p>
+  </section>
+
+  <div id="app" class="hidden">
+    <section class="panel">
+      <div class="row" style="justify-content:space-between">
+        <div><h2>Új termék hozzáadása</h2><p class="muted">Adj meg nevet, árat, leírást és opcionálisan képet.</p></div>
+      </div>
+      <form id="productForm">
+        <div class="formgrid">
+          <div><label>Név<br><input required name="name" placeholder="pl. Method Black"></label></div>
+          <div><label>Ár (Ft)<br><input required type="number" min="0" step="1" name="price" placeholder="2490"></label></div>
+          <div><label>Kategória<br><select name="cat"><option value="method">Method</option><option value="feeder">Feeder</option><option value="ponty">Ponty</option></select></label></div>
+          <div><label>Címke<br><input name="tag" placeholder="METHOD"></label></div>
+          <div class="full"><label>Leírás<br><textarea required name="desc" placeholder="Rövid termékleírás..."></textarea></label></div>
+          <div class="full"><label>Termékkép<br><input type="file" name="image" accept="image/png,image/jpeg,image/webp"></label></div>
+        </div>
+        <div class="row" style="margin-top:14px"><button type="submit">+ Termék mentése</button><span id="formMsg" class="muted"></span></div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="row" style="justify-content:space-between"><h2>Termékek</h2><button class="secondary" onclick="loadProducts()">Frissítés</button></div>
+      <div id="products" class="grid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="row" style="justify-content:space-between"><h2>Rendelések</h2><button class="secondary" onclick="loadOrders()">Frissítés</button></div>
+      <div id="orders"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+let password='';
+const $=id=>document.getElementById(id);
+const money=n=>Number(n).toLocaleString('hu-HU')+' Ft';
+
+$('pw').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+
+async function login(){
+  password=$('pw').value;
+  const r=await fetch('/api/admin/products',{headers:{'x-admin-password':password}});
+  const d=await r.json();
+  if(!r.ok){$('loginMsg').innerHTML='<span class="err">'+d.error+'</span>';return}
+  $('loginPanel').classList.add('hidden'); $('app').classList.remove('hidden');
+  renderProducts(d); loadOrders();
+}
+
+async function loadProducts(){
+  const r=await fetch('/api/admin/products',{headers:{'x-admin-password':password}});
+  if(!r.ok)return;
+  renderProducts(await r.json());
+}
+
+function renderProducts(list){
+  $('products').innerHTML=list.map(p=>`
+    <article class="panel product">
+      <div class="thumb">${p.image?`<img src="/${p.image}" alt="">`:'<div class="empty">Nincs kép</div>'}</div>
+      <div>
+        <div class="row"><h3 style="margin:0">${esc(p.name)}</h3><span class="badge">${esc(p.tag||p.cat)}</span></div>
+        <p class="muted">${money(p.price)} · ${esc(p.cat)}</p>
+        <p>${esc(p.desc)}</p>
+        <div class="row">
+          <button onclick="editProduct(${p.id})">Szerkesztés</button>
+          <button class="danger" onclick="deleteProduct(${p.id})">Törlés</button>
+        </div>
+      </div>
+    </article>`).join('') || '<p class="muted">Még nincs termék.</p>';
+}
+
+async function editProduct(id){
+  const r=await fetch('/api/admin/products',{headers:{'x-admin-password':password}});
+  const list=await r.json(); const p=list.find(x=>x.id===id); if(!p)return;
+  const name=prompt('Termék neve:',p.name); if(name===null)return;
+  const price=prompt('Ár Ft-ban:',p.price); if(price===null)return;
+  const desc=prompt('Leírás:',p.desc); if(desc===null)return;
+  const cat=prompt('Kategória (method / feeder / ponty):',p.cat); if(cat===null)return;
+  const tag=prompt('Címke:',p.tag||''); if(tag===null)return;
+  const body={name,price,desc,cat,tag};
+  if(!await sendImage(body,null)) return;
+  const rr=await fetch('/api/admin/products/'+id,{method:'PUT',headers:{'Content-Type':'application/json','x-admin-password':password},body:JSON.stringify(body)});
+  const d=await rr.json(); if(!rr.ok){alert(d.error);return} loadProducts();
+}
+
+async function sendImage(body,file){
+  return true;
+}
+
+async function deleteProduct(id){
+  if(!confirm('Biztosan törlöd ezt a terméket?'))return;
+  const r=await fetch('/api/admin/products/'+id,{method:'DELETE',headers:{'x-admin-password':password}});
+  const d=await r.json(); if(!r.ok)alert(d.error); else loadProducts();
+}
+
+$('productForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const f=new FormData(e.target);
+  const body={name:f.get('name'),price:f.get('price'),desc:f.get('desc'),cat:f.get('cat'),tag:f.get('tag')};
+  const file=f.get('image');
+  if(file && file.size){
+    if(file.size>6*1024*1024){$('formMsg').innerHTML='<span class="err">A kép maximum 6 MB lehet.</span>';return}
+    body.imageData=await fileToDataURL(file);
+  }
+  $('formMsg').textContent='Mentés...';
+  const r=await fetch('/api/admin/products',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':password},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(!r.ok){$('formMsg').innerHTML='<span class="err">'+d.error+'</span>';return}
+  e.target.reset(); $('formMsg').innerHTML='<span class="ok">Termék elmentve.</span>'; loadProducts();
+});
+
+function fileToDataURL(file){return new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=reject;fr.readAsDataURL(file)})}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+async function loadOrders(){
+  const r=await fetch('/api/admin/orders',{headers:{'x-admin-password':password}});
+  if(!r.ok)return;
+  const d=await r.json();
+  $('orders').innerHTML=d.map(o=>`
+    <div class="order">
+      <div class="row"><b>${esc(o.id)}</b><span class="muted">${new Date(o.createdAt).toLocaleString('hu-HU')}</span>
+      <select onchange="status('${o.id}',this.value)">${['Új','Feldolgozás alatt','Feladva','Teljesítve','Törölve'].map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select></div>
+      <p><b>${esc(o.customer.name)}</b><br>${esc(o.customer.email)} · ${esc(o.customer.phone)}<br>${esc(o.customer.address)}<br>Szállítás: ${esc(o.shipping)} · Fizetés: ${esc(o.payment)}</p>
+      <p>${o.items.map(i=>`${esc(i.name)} × ${i.qty} — ${money(i.price*i.qty)}`).join('<br>')}</p>
+      <b>Összesen: ${money(o.total)}</b>
+    </div>`).join('')||'<p class="muted">Még nincs rendelés.</p>';
+}
+async function status(id,value){
+  await fetch('/api/admin/orders/'+id,{method:'PATCH',headers:{'Content-Type':'application/json','x-admin-password':password},body:JSON.stringify({status:value})});
+  loadOrders();
+}
+</script>
+</body>
+</html>

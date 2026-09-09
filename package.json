@@ -1,0 +1,13 @@
+{
+  "name": "drava-bait-webshop",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Drava Bait webshop backend and admin",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

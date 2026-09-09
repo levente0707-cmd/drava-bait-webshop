@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "name": "Method Black",
+    "cat": "method",
+    "price": 1990,
+    "desc": "Sötét method keverék intenzív, gyors etetéshez.",
+    "tag": "METHOD",
+    "image": "assets/method-black.png"
+  },
+  {
+    "id": 2,
+    "name": "Feeder Green",
+    "cat": "feeder",
+    "price": 1890,
+    "desc": "Zöldes, feederhez optimalizált univerzális keverék.",
+    "tag": "FEEDER",
+    "image": ""
+  },
+  {
+    "id": 3,
+    "name": "Carp Gold",
+    "cat": "ponty",
+    "price": 1890,
+    "desc": "Édesebb karakterű pontyos keverék hosszabb horgászatokra.",
+    "tag": "PONTY",
+    "image": ""
+  },
+  {
+    "id": 4,
+    "name": "River Brown",
+    "cat": "feeder",
+    "price": 1790,
+    "desc": "Barna folyóvízi jellegű keverék, erősebb tapadással.",
+    "tag": "FEEDER",
+    "image": ""
+  }
+]
